@@ -2,6 +2,7 @@ use assets::assets_bundle;
 use bevy::{prelude::*, window::WindowResolution, render::camera::Viewport};
 
 pub mod assets;
+pub mod levels;
 
 use assets::*;
 
@@ -26,7 +27,6 @@ fn animate_sprite(
 }
 
 
-
 fn startup(mut commands: Commands, asset_server: Res<AssetServer>, texture_atlases: ResMut<Assets<TextureAtlas>>) {
 
     let (player, floor) = assets_bundle(asset_server, texture_atlases);
@@ -34,12 +34,12 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, texture_atlas
     commands.spawn(Camera2dBundle { 
         camera: Camera {
             viewport: Some(Viewport {
-                physical_size: UVec2::new(400, 300),
+                physical_size: UVec2::new(640, 400),
                 ..default()
             }),
             ..default()
         },
-        transform: Transform::from_scale(Vec3::splat(0.1)),
+        transform: Transform::from_scale(Vec3::splat(0.3)),
         ..default()
     });
 
@@ -48,6 +48,7 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, texture_atlas
 }
 
 fn main() {
+    dbg!(levels::LEVELS);
     App::new()
         .add_plugins(
             DefaultPlugins
