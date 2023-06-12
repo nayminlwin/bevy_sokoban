@@ -1,9 +1,10 @@
-use assets::assets_bundle;
 use bevy::{prelude::*, window::WindowResolution, render::camera::Viewport};
 
 pub mod assets;
 pub mod levels;
+pub mod map;
 
+use map::*;
 use assets::*;
 
 fn animate_sprite(
@@ -26,11 +27,7 @@ fn animate_sprite(
     }
 }
 
-
-fn startup(mut commands: Commands, asset_server: Res<AssetServer>, texture_atlases: ResMut<Assets<TextureAtlas>>) {
-
-    let (player, floor) = assets_bundle(asset_server, texture_atlases);
-
+fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle { 
         camera: Camera {
             viewport: Some(Viewport {
@@ -43,8 +40,6 @@ fn startup(mut commands: Commands, asset_server: Res<AssetServer>, texture_atlas
         ..default()
     });
 
-    commands.spawn(player);
-    commands.spawn(floor);
 }
 
 fn main() {
@@ -66,7 +61,7 @@ fn main() {
                     ..default()
                 }),
         )
-        .add_startup_system(startup)
+        .add_startup_systems((spawn_camera, spawn_map))
         .add_system(animate_sprite)
         .run();
 }

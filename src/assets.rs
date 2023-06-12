@@ -12,9 +12,6 @@ pub struct AnimationTimer(Timer);
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Player;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
-pub struct Floor;
-
 #[derive(Bundle)]
 pub struct PlayerBundle {
     #[bundle]
@@ -27,18 +24,21 @@ pub struct PlayerBundle {
     pub animation_timer: AnimationTimer,
 }
 
-#[derive(Bundle)]
-pub struct FloorBundle {
-    #[bundle]
-    pub sprite_sheet_bundle: SpriteSheetBundle,
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
+pub struct Floor;
 
-    pub floor: Floor, 
-}
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
+pub struct Wall;
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
+pub struct Trigger;
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
+pub struct Box;
 
 pub fn assets_bundle(
     asset_server: Res<AssetServer>, 
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>) -> (PlayerBundle, FloorBundle) {
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>) -> (Handle<TextureAtlas>, Handle<TextureAtlas>) {
 
     let player_handle = asset_server.load("sprites/HumanBaseIdle.png");
     let player_atlas =
@@ -47,13 +47,15 @@ pub fn assets_bundle(
         Some(Vec2::splat(12.)));
     let player_atlas_handle = texture_atlases.add(player_atlas);
 
-    let floor_handle = asset_server.load("sprites/Minifantasy_DungeonFloorTiles.png");
-    let floor_atlas = 
-        TextureAtlas::from_grid(floor_handle, 
-        Vec2::new(8., 8.), 7, 2, None, None);
-    let floor_atlas_handle = texture_atlases.add(floor_atlas);
+    let dungeon_handle = asset_server.load("sprites/DungeonTiles.png");
+    let dungeon_atlas = 
+        TextureAtlas::from_grid(dungeon_handle, 
+        Vec2::new(8., 8.), 4, 1, None, None);
+    let dungeon_atlas_handle = texture_atlases.add(dungeon_atlas);
 
-    (PlayerBundle {
+    (player_atlas_handle, dungeon_atlas_handle)
+
+    /* PlayerBundle {
         sprite_sheet_bundle: SpriteSheetBundle { 
             sprite: TextureAtlasSprite::new(0),
             texture_atlas: player_atlas_handle, 
@@ -62,13 +64,5 @@ pub fn assets_bundle(
         player: Player,
         animation_indices: AnimationIndices { first: 0, last: 15 },
         animation_timer: AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating))
-    },
-    FloorBundle {
-        sprite_sheet_bundle: SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(0),
-            texture_atlas: floor_atlas_handle,
-            ..default()
-        },
-        floor: Floor
-    })
+    } */
 }
