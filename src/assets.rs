@@ -6,8 +6,14 @@ pub struct AnimationIndices {
     pub last: usize,
 }
 
+#[derive(Component)]
+pub struct MapSize {
+    pub width: i32,
+    pub height: i32
+}
+
 #[derive(Component, Deref, DerefMut)]
-pub struct AnimationTimer(Timer);
+pub struct AnimationTimer(pub Timer);
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Player;
@@ -29,6 +35,9 @@ pub struct Floor;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Wall;
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
+pub struct Door;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Trigger;

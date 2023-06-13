@@ -29,21 +29,17 @@ fn animate_sprite(
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle { 
-        camera: Camera {
-            viewport: Some(Viewport {
-                physical_size: UVec2::new(640, 400),
-                ..default()
-            }),
+        transform: Transform {
+            scale: Vec3::splat(0.2),
+            translation: Vec3::new(0., 0., 5.),
             ..default()
         },
-        transform: Transform::from_scale(Vec3::splat(0.3)),
         ..default()
     });
 
 }
 
 fn main() {
-    dbg!(levels::LEVELS);
     App::new()
         .add_plugins(
             DefaultPlugins
