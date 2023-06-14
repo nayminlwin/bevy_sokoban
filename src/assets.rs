@@ -6,10 +6,10 @@ pub struct AnimationIndices {
     pub last: usize,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy)]
 pub struct MapSize {
-    pub width: i32,
-    pub height: i32
+    pub width: usize,
+    pub height: usize
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -28,22 +28,44 @@ pub struct PlayerBundle {
     pub animation_indices: AnimationIndices,
 
     pub animation_timer: AnimationTimer,
+
+    pub tile_pos: TilePos
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
-pub struct Floor;
+#[derive(Component, Clone, Copy)]
+pub struct TilePos {
+    pub x: usize,
+    pub y: usize,
+}
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
-pub struct Wall;
+impl TilePos {
+    pub fn to_index(&self, max_width: usize) -> usize {
+        self.x + self.y * max_width
+    }
+}
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
-pub struct Door;
+#[derive(Component)]
+pub enum TileType {
+    WALL,
+    TRIGGER,
+    BOX,
+    DOOR
+}
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
-pub struct Trigger;
+#[derive(Bundle)]
+pub struct TileBundle {
+    #[bundle]
+    pub sprite_sheet: SpriteSheetBundle,
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
-pub struct Box;
+    pub tile_type: TileType,
+    pub tile_pos: TilePos
+}
+
+#[derive(Component)]
+pub struct MapTiles{ 
+    pub tiles: [Option<Entity>; 128 * 128],
+    pub size: MapSize,
+}
 
 pub fn assets_bundle(
     asset_server: Res<AssetServer>, 

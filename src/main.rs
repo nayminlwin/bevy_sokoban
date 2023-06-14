@@ -1,5 +1,4 @@
-use bevy::{prelude::*, window::WindowResolution, render::camera::Viewport};
-
+use bevy::{prelude::*, window::WindowResolution};
 pub mod assets;
 pub mod levels;
 pub mod map;

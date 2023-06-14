@@ -46,68 +46,65 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
         }
     }
 
-    x = 1;
-    y = -1;
+    x = 0;
 
-    // commands.spawn(map_size);
+    let mut map_tiles = MapTiles {
+        tiles: [None; 128 * 128],
+        size: map_size,
+    };
 
     let center_transform = Transform::from_xyz(
         -(map_size.width as f32 * 8.) / 2., 
         (map_size.height as f32 * 8.) / 2., 0.);
+
     for c in map_level.chars() {
         if c == '\n' {
-            y -= 1;
-            x = 1;
+            y += 1;
+            x = 0;
         } else {
             let transform = 
-                Transform::from_xyz(x as f32 * 8., y as f32 * 8., 0.) 
-                * center_transform;
+                Transform::from_xyz(x as f32 * 8., y as f32 * -8., 0.) 
+                    * center_transform;
             
-            commands.spawn((
-                Floor,
+            commands.spawn(
                 create_tile_bundle(0, atlas_handle.clone(), transform),
-            ));
+            );
 
-            let transform = Transform::from_xyz(x as f32 * 8., y as f32 * 8., 1.) * center_transform;
+            let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 1.) * center_transform;
+            let tile_pos = TilePos { x, y };
 
-            match c {
-               '#' => {
-                    commands.spawn((
-                        Wall,
-                        create_tile_bundle(2, atlas_handle.clone(), transform),
-                    ));
-                },
-                '@' => {
-                    commands.spawn(PlayerBundle {
-                        sprite_sheet_bundle:
-                            create_tile_bundle(0, player_atlas_handle.clone(), transform),
-                        animation_timer: 
-                            AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-                        animation_indices: AnimationIndices { first: 0, last: 15 },
-                        player: Player,
-                    });
-                },
-                'c' => {
-                    commands.spawn((
-                        Box,
-                        create_tile_bundle(3, atlas_handle.clone(), transform),
-                    ));
-                },
-                'o' => {
-                    commands.spawn((
-                        Trigger,
-                        create_tile_bundle(1, atlas_handle.clone(), transform),
-                    ));
-                },
-                'D' => {
-                    commands.spawn((
-                        Door,
-                        create_tile_bundle(4, atlas_handle.clone(), transform),
-                    ));
-                },
-                unknown => ()
-            };
+            let tile_index = tile_pos.to_index(map_size.width);
+
+            if c == '@' {
+                let entity = commands.spawn(PlayerBundle {
+                    sprite_sheet_bundle:
+                    create_tile_bundle(0, player_atlas_handle.clone(), transform),
+                    player: Player,
+                    tile_pos,
+                    animation_timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+                    animation_indices: AnimationIndices { first: 0, last: 15 },
+                }).id();
+                map_tiles.tiles[tile_index] = Some(entity);
+            }
+
+            if let Some((sprite_index, tile_type)) = match c {
+               '#' => Some((2, TileType::WALL)) ,
+                'c' => Some((3, TileType::BOX)),
+                'o' => Some((1, TileType::TRIGGER)),
+                'D' => Some((4, TileType::DOOR)),
+                _ => None
+            } {
+                let entity = commands.spawn(TileBundle {
+                    sprite_sheet: create_tile_bundle(sprite_index, atlas_handle.clone(), transform),
+                    tile_type,
+                    tile_pos
+                }).id();
+                map_tiles.tiles[tile_index] = Some(entity);
+            }
+
             x += 1;
         }
+
     }
+    commands.spawn(map_size);
 }
