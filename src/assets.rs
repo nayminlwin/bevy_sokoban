@@ -32,7 +32,7 @@ pub struct PlayerBundle {
     pub tile_pos: TilePos
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Debug, Component, Clone, Copy)]
 pub struct TilePos {
     pub x: usize,
     pub y: usize,
@@ -42,24 +42,32 @@ impl TilePos {
     pub fn to_index(&self, max_width: usize) -> usize {
         self.x + self.y * max_width
     }
+
+    pub fn add_and_clone(&self, dx: i32, dy: i32) -> TilePos {
+        TilePos {
+            x: (self.x as i32 + dx) as usize,
+            y: (self.y as i32 + dy) as usize
+        }
+    }
 }
 
 #[derive(Component)]
-pub enum TileType {
-    WALL,
-    TRIGGER,
-    BOX,
-    DOOR
-}
+pub struct Wall;
+// #[derive(Component)]
+// pub struct Trigger;
+#[derive(Component)]
+pub struct Box;
+#[derive(Component)]
+pub struct Door;
 
-#[derive(Bundle)]
+/* #[derive(Bundle)]
 pub struct TileBundle {
     #[bundle]
     pub sprite_sheet: SpriteSheetBundle,
-
     pub tile_type: TileType,
     pub tile_pos: TilePos
 }
+ */
 
 #[derive(Component)]
 pub struct TileStorage {
@@ -68,7 +76,7 @@ pub struct TileStorage {
 }
 
 #[derive(Component)]
-pub struct TriggerIndices(Vec<usize>);
+pub struct TriggerIndices(pub Vec<usize>);
 
 
 impl TileStorage {
@@ -76,6 +84,20 @@ impl TileStorage {
         Self {
             tiles: vec![None; size.width * size.height],
             size
+        }
+    }
+
+    pub fn move_tile(&mut self, 
+                     entity: Entity, 
+                     old_index: usize, 
+                     new_index: usize) -> Option<Entity> {
+
+        if let Some(blocking) = self.tiles[new_index] {
+            return Some(blocking);
+        } else {
+            self.tiles[old_index] = None;
+            self.tiles[new_index] = Some(entity);
+            return None;
         }
     }
 }

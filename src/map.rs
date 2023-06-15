@@ -86,25 +86,31 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                 }).id();
                 map_tiles.tiles[tile_index] = Some(entity);
             } else if c == 'o' {
-                let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 2.) * center_transform;
+                let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 2.)
+                    * center_transform;
+
                 commands.spawn(
                     create_tile_bundle(1, atlas_handle.clone(), transform)
                 );
                 triggers.push(tile_index);
             }
 
-            if let Some((sprite_index, tile_type)) = match c {
-                '#' => Some((2, TileType::WALL)) ,
-                'c' => Some((3, TileType::BOX)),
-                'o' => Some((1, TileType::TRIGGER)),
-                'D' => Some((4, TileType::DOOR)),
+            if let Some(entity) = match c {
+                '#' => Some(commands.spawn((
+                            create_tile_bundle(2, atlas_handle.clone(), transform),
+                            tile_pos,
+                            Wall)).id()) ,
+                'c' => Some(commands.spawn((
+                            create_tile_bundle(3, atlas_handle.clone(), transform),
+                            tile_pos,
+                            Box)).id()),
+                // 'o' => Some((1, TileType::TRIGGER)),
+                'D' => Some(commands.spawn((
+                            create_tile_bundle(4, atlas_handle.clone(), transform),
+                            tile_pos,
+                            Door)).id()),
                 _ => None
             } {
-                let entity = commands.spawn(TileBundle {
-                    sprite_sheet: create_tile_bundle(sprite_index, atlas_handle.clone(), transform),
-                    tile_type,
-                    tile_pos
-                }).id();
                 map_tiles.tiles[tile_index] = Some(entity);
             }
 
@@ -113,4 +119,5 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
 
     }
     commands.spawn(map_tiles);
+    commands.spawn(TriggerIndices(triggers));
 }

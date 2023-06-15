@@ -7,7 +7,7 @@ pub fn player_move(
     keyboard_input: Res<Input<KeyCode>>,
     triggers: Query<&TriggerIndices>,
     mut player: Query<(Entity, &mut Transform, &mut TilePos, &mut MoveTimer), With<Player>>,
-    mut tiles_query: Query<(Entity, &mut TilePos, &TileType, &mut Transform), Without<Player>>,
+    mut tiles_query: Query<(Entity, &mut TilePos, &mut Transform), (With<Box>, Without<Player>)>,
     mut map_tiles_query: Query<&mut TileStorage>) {
 
     let mut map_tiles: Mut<TileStorage> = map_tiles_query.single_mut();
@@ -32,34 +32,48 @@ pub fn player_move(
                 continue;
             }
 
-            let new_pos = TilePos {
-                x: (tile_pos.x as i32 + dx) as usize,
-                y: (tile_pos.y as i32 + dy) as usize
-            };
-
+            let new_pos = tile_pos.add_and_clone(dx, dy);
+            let old_index = tile_pos.to_index(map_tiles.size.width);
             let new_index = new_pos.to_index(map_tiles.size.width);
 
-            if let Some(tile_entity) = map_tiles.tiles[new_index] {
-                // If the new pos 
-                let (box_entity, mut tile_pos, tile_type, mut transform) = tiles_query.get_mut(tile_entity).unwrap();
-                if matches!(tile_type, TileType::BOX) {
-                    let orig_index = tile_pos.to_index(map_tiles.size.width);
-                    map_tiles.tiles[orig_index] = None;
+            if let Some(blocking_entity) = map_tiles.move_tile(
+                player_entity, old_index, new_index) {
 
-                    tile_pos.x += (tile_pos.x as i32 + dx) as usize;
-                    tile_pos.y += (tile_pos.y as i32 + dy) as usize;
-                    let new_index = tile_pos.to_index(map_tiles.size.width);
-                    map_tiles.tiles[new_index] = Some(box_entity);
+                let (box_entity, mut tile_pos, mut transform)
+                    = tiles_query.get_mut(blocking_entity).unwrap();
+
+                let old_index = tile_pos.to_index(map_tiles.size.width);
+
+                let new_pos = tile_pos.add_and_clone(dx, dy);
+                let new_index = new_pos.to_index(map_tiles.size.width);
+
+                if let None = map_tiles.move_tile(box_entity, old_index, new_index) {
+                    *tile_pos = new_pos;
                     transform.translation += movement;
                 }
-            } else {
-                let orig_index = tile_pos.to_index(map_tiles.size.width);
-                map_tiles.tiles[orig_index] = None;
 
+                // Check if all triggers are activated
+                let mut win = true;
+                let TriggerIndices(triggers) = triggers.single();
+                for trigger_index in triggers {
+                    if let Some(entity) = map_tiles.tiles[*trigger_index] {
+                        if let Err(_) = tiles_query.get(entity) {
+                            win = false;
+                            break;
+                        }
+                    } else {
+                        win = false;
+                        break;
+                    }
+                }
+                if win {
+                    println!("Win!");
+                }
+            } else {
                 *tile_pos = new_pos;
-                map_tiles.tiles[new_index] = Some(player_entity);
                 transform.translation += movement;
             }
+
             move_cooldown.reset();
         }
     }
