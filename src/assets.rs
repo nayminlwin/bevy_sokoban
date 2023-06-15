@@ -15,6 +15,9 @@ pub struct MapSize {
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);
 
+#[derive(Component, Deref, DerefMut)]
+pub struct MoveTimer(pub Timer);
+
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, Component)]
 pub struct Player;
 
@@ -22,13 +25,10 @@ pub struct Player;
 pub struct PlayerBundle {
     #[bundle]
     pub sprite_sheet_bundle: SpriteSheetBundle,
-
     pub player: Player,
-
     pub animation_indices: AnimationIndices,
-
     pub animation_timer: AnimationTimer,
-
+    pub move_cooldown: MoveTimer,
     pub tile_pos: TilePos
 }
 
@@ -62,9 +62,22 @@ pub struct TileBundle {
 }
 
 #[derive(Component)]
-pub struct MapTiles{ 
-    pub tiles: [Option<Entity>; 128 * 128],
+pub struct TileStorage {
+    pub tiles: Vec<Option<Entity>>,
     pub size: MapSize,
+}
+
+#[derive(Component)]
+pub struct TriggerIndices(Vec<usize>);
+
+
+impl TileStorage {
+    pub fn new(size: MapSize) -> Self {
+        Self {
+            tiles: vec![None; size.width * size.height],
+            size
+        }
+    }
 }
 
 pub fn assets_bundle(

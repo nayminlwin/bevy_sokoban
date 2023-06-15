@@ -29,7 +29,8 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
     let atlas_handle = texture_atlases.add(dungeon_atlas);
 
     let map_level = LEVELS[0].trim();
-    let mut map_size = MapSize { width: 0, height: 0 };
+    let mut map_size = MapSize { width: 0, height: 1 };
+    let mut triggers = Vec::new();
 
     let mut x = 0;
     let mut y = 0;
@@ -46,12 +47,9 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
         }
     }
 
-    x = 0;
+    let mut map_tiles = TileStorage::new(map_size);
 
-    let mut map_tiles = MapTiles {
-        tiles: [None; 128 * 128],
-        size: map_size,
-    };
+    x = 0;
 
     let center_transform = Transform::from_xyz(
         -(map_size.width as f32 * 8.) / 2., 
@@ -70,10 +68,11 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                 create_tile_bundle(0, atlas_handle.clone(), transform),
             );
 
-            let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 1.) * center_transform;
             let tile_pos = TilePos { x, y };
 
             let tile_index = tile_pos.to_index(map_size.width);
+
+            let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 3.) * center_transform;
 
             if c == '@' {
                 let entity = commands.spawn(PlayerBundle {
@@ -83,12 +82,19 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                     tile_pos,
                     animation_timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
                     animation_indices: AnimationIndices { first: 0, last: 15 },
+                    move_cooldown: MoveTimer(Timer::from_seconds(0.2, TimerMode::Once))
                 }).id();
                 map_tiles.tiles[tile_index] = Some(entity);
+            } else if c == 'o' {
+                let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 2.) * center_transform;
+                commands.spawn(
+                    create_tile_bundle(1, atlas_handle.clone(), transform)
+                );
+                triggers.push(tile_index);
             }
 
             if let Some((sprite_index, tile_type)) = match c {
-               '#' => Some((2, TileType::WALL)) ,
+                '#' => Some((2, TileType::WALL)) ,
                 'c' => Some((3, TileType::BOX)),
                 'o' => Some((1, TileType::TRIGGER)),
                 'D' => Some((4, TileType::DOOR)),
@@ -106,5 +112,5 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
         }
 
     }
-    commands.spawn(map_size);
+    commands.spawn(map_tiles);
 }

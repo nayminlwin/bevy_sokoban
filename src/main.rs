@@ -2,9 +2,11 @@ use bevy::{prelude::*, window::WindowResolution};
 pub mod assets;
 pub mod levels;
 pub mod map;
+pub mod system;
 
 use map::*;
 use assets::*;
+use system::*;
 
 fn animate_sprite(
     time: Res<Time>,
@@ -58,5 +60,6 @@ fn main() {
         )
         .add_startup_systems((spawn_camera, spawn_map))
         .add_system(animate_sprite)
+        .add_system(player_move)
         .run();
 }
