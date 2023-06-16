@@ -6,10 +6,10 @@ pub struct AnimationIndices {
     pub last: usize,
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Debug, Component, Clone, Copy)]
 pub struct MapSize {
-    pub width: usize,
-    pub height: usize
+    pub width: i32,
+    pub height: i32
 }
 
 #[derive(Component, Deref, DerefMut)]
@@ -34,31 +34,25 @@ pub struct PlayerBundle {
 
 #[derive(Debug, Component, Clone, Copy)]
 pub struct TilePos {
-    pub x: usize,
-    pub y: usize,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl TilePos {
-    pub fn to_index(&self, max_width: usize) -> usize {
-        self.x + self.y * max_width
+    pub fn to_index(&self, max_width: i32) -> usize {
+        (self.x + self.y * max_width) as usize
     }
 
     pub fn add_and_clone(&self, dx: i32, dy: i32) -> TilePos {
         TilePos {
-            x: (self.x as i32 + dx) as usize,
-            y: (self.y as i32 + dy) as usize
+            x: self.x + dx,
+            y: self.y + dy
         }
     }
 }
 
 #[derive(Component)]
-pub struct Wall;
-// #[derive(Component)]
-// pub struct Trigger;
-#[derive(Component)]
-pub struct Box;
-#[derive(Component)]
-pub struct Door;
+pub enum BlockType { Wall, Box, Door }
 
 /* #[derive(Bundle)]
 pub struct TileBundle {
@@ -78,11 +72,14 @@ pub struct TileStorage {
 #[derive(Component)]
 pub struct TriggerIndices(pub Vec<usize>);
 
+#[derive(Component)]
+pub struct DoorIndex(pub usize);
+
 
 impl TileStorage {
     pub fn new(size: MapSize) -> Self {
         Self {
-            tiles: vec![None; size.width * size.height],
+            tiles: vec![None; (size.width * size.height) as usize],
             size
         }
     }

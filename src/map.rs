@@ -77,7 +77,7 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
             if c == '@' {
                 let entity = commands.spawn(PlayerBundle {
                     sprite_sheet_bundle:
-                    create_tile_bundle(0, player_atlas_handle.clone(), transform),
+                        create_tile_bundle(0, player_atlas_handle.clone(), transform),
                     player: Player,
                     tile_pos,
                     animation_timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
@@ -95,22 +95,19 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                 triggers.push(tile_index);
             }
 
-            if let Some(entity) = match c {
-                '#' => Some(commands.spawn((
-                            create_tile_bundle(2, atlas_handle.clone(), transform),
-                            tile_pos,
-                            Wall)).id()) ,
-                'c' => Some(commands.spawn((
-                            create_tile_bundle(3, atlas_handle.clone(), transform),
-                            tile_pos,
-                            Box)).id()),
-                // 'o' => Some((1, TileType::TRIGGER)),
-                'D' => Some(commands.spawn((
-                            create_tile_bundle(4, atlas_handle.clone(), transform),
-                            tile_pos,
-                            Door)).id()),
+            if let Some((sprite_index, block_type)) = match c {
+                '#' => Some((2, BlockType::Wall)),
+                'c' => Some((3, BlockType::Box)),
+                'D' => {
+                    commands.spawn(DoorIndex(tile_index));
+                    Some((4, BlockType::Door))
+                },
                 _ => None
             } {
+                let entity = commands.spawn((
+                    create_tile_bundle(sprite_index, atlas_handle.clone(), transform),
+                    tile_pos, block_type
+                )).id();
                 map_tiles.tiles[tile_index] = Some(entity);
             }
 
@@ -120,4 +117,10 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
     }
     commands.spawn(map_tiles);
     commands.spawn(TriggerIndices(triggers));
+}
+
+pub fn reset_map(mut commands: Commands, keyboard_input: Res<Input<KeyCode>>, entities: Query<Entity, (Without<Camera>, Without<Window>)>) {
+    for entity in &entities {
+        commands.entity(entity).despawn();
+    }
 }

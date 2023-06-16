@@ -1,4 +1,5 @@
 use bevy::{prelude::*, window::WindowResolution};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 pub mod assets;
 pub mod levels;
 pub mod map;
@@ -7,6 +8,13 @@ pub mod system;
 use map::*;
 use assets::*;
 use system::*;
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, States)]
+pub enum GameState {
+    #[default]
+    Playing,
+    Resetting
+}
 
 fn animate_sprite(
     time: Res<Time>,
@@ -56,10 +64,12 @@ fn main() {
                 .set(AssetPlugin {
                     watch_for_changes: true,
                     ..default()
-                }),
+                })
         )
-        .add_startup_systems((spawn_camera, spawn_map))
-        .add_system(animate_sprite)
-        .add_system(player_move)
+        .add_state::<GameState>()
+        .add_startup_system(spawn_camera)
+        .add_system(spawn_map.in_schedule(OnEnter(GameState::Playing)))
+        .add_systems((animate_sprite, player_move).in_set(OnUpdate(GameState::Playing)))
+        .add_system(reset_map.in_schedule(OnEnter(GameState::Resetting)))
         .run();
 }
