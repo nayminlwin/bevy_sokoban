@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{assets::*, levels::LEVELS};
+use crate::GameState;
 
 fn create_tile_bundle(sprite_index: usize, texture_atlas: Handle<TextureAtlas>, transform: Transform)
     -> SpriteSheetBundle {
@@ -15,18 +16,11 @@ fn create_tile_bundle(sprite_index: usize, texture_atlas: Handle<TextureAtlas>, 
 
 pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
 
-    let player_handle = asset_server.load("sprites/HumanBaseIdle.png");
-    let player_atlas =
-        TextureAtlas::from_grid(player_handle, 
-        Vec2::new(8., 8.), 16, 4, Some(Vec2::splat(24.)), 
-        Some(Vec2::splat(12.)));
-    let player_atlas_handle = texture_atlases.add(player_atlas);
+    let player_atlas_handle = load_asset_atlas(&asset_server, &mut texture_atlases, 
+        "sprites/HumanBaseIdle.png", 8, 2, Some(Vec2::splat(24.)), Some(Vec2::splat(12.)));
 
-    let dungeon_handle = asset_server.load("sprites/DungeonTiles.png");
-    let dungeon_atlas = 
-        TextureAtlas::from_grid(dungeon_handle, 
-        Vec2::new(8., 8.), 4, 2, None, None);
-    let atlas_handle = texture_atlases.add(dungeon_atlas);
+    let atlas_handle = load_asset_atlas(&asset_server, &mut texture_atlases,
+        "sprites/DungeonTiles.png", 4, 2, None, None);
 
     let map_level = LEVELS[0].trim();
     let mut map_size = MapSize { width: 0, height: 1 };
@@ -79,10 +73,14 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                     sprite_sheet_bundle:
                         create_tile_bundle(0, player_atlas_handle.clone(), transform),
                     player: Player,
+                    movable: WorldPosition {
+                        x: transform.translation.x,
+                        y: transform.translation.y
+                    },
                     tile_pos,
-                    animation_timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-                    animation_indices: AnimationIndices { first: 0, last: 15 },
-                    move_cooldown: MoveTimer(Timer::from_seconds(0.2, TimerMode::Once))
+                    animation_timer: AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+                    animation_indices: AnimationIndices { first: 0, last: 7 },
+                    move_cooldown: MoveTimer(Timer::from_seconds(0.4, TimerMode::Once))
                 }).id();
                 map_tiles.tiles[tile_index] = Some(entity);
             } else if c == 'o' {
@@ -93,11 +91,20 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                     create_tile_bundle(1, atlas_handle.clone(), transform)
                 );
                 triggers.push(tile_index);
+            } else if c == 'b' {
+                let entity = commands.spawn((
+                    create_tile_bundle(3, atlas_handle.clone(), transform),
+                    tile_pos, BlockType::Box,
+                    WorldPosition {
+                        x: transform.translation.x,
+                        y: transform.translation.y
+                    },
+                )).id();
+                map_tiles.tiles[tile_index] = Some(entity);
             }
 
             if let Some((sprite_index, block_type)) = match c {
                 '#' => Some((2, BlockType::Wall)),
-                'c' => Some((3, BlockType::Box)),
                 'D' => {
                     commands.spawn(DoorIndex(tile_index));
                     Some((4, BlockType::Door))
@@ -119,8 +126,18 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
     commands.spawn(TriggerIndices(triggers));
 }
 
-pub fn reset_map(mut commands: Commands, keyboard_input: Res<Input<KeyCode>>, entities: Query<Entity, (Without<Camera>, Without<Window>)>) {
+pub fn reset_map(keyboard_input: Res<Input<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
+    if keyboard_input.just_pressed(KeyCode::R) {
+        next_state.set(GameState::Resetting);
+    }
+}
+
+pub fn clear_map(mut commands: Commands, mut next_state: ResMut<NextState<GameState>>,
+    entities: Query<Entity, (Without<Camera>, Without<Window>)>) {
+
     for entity in &entities {
         commands.entity(entity).despawn();
     }
+
+    next_state.set(GameState::Playing);
 }

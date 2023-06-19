@@ -6,34 +6,14 @@ pub mod map;
 pub mod system;
 
 use map::*;
-use assets::*;
 use system::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default, States)]
 pub enum GameState {
     #[default]
     Playing,
-    Resetting
-}
-
-fn animate_sprite(
-    time: Res<Time>,
-    mut query: Query<(
-        &AnimationIndices,
-        &mut AnimationTimer,
-        &mut TextureAtlasSprite,
-    ), With<Player>>,
-) {
-    for (indices, mut timer, mut sprite) in &mut query {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            sprite.index = if sprite.index == indices.last {
-                indices.first
-            } else {
-                sprite.index + 1
-            };
-        }
-    }
+    Resetting,
+    GameOver
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -69,7 +49,8 @@ fn main() {
         .add_state::<GameState>()
         .add_startup_system(spawn_camera)
         .add_system(spawn_map.in_schedule(OnEnter(GameState::Playing)))
-        .add_systems((animate_sprite, player_move).in_set(OnUpdate(GameState::Playing)))
-        .add_system(reset_map.in_schedule(OnEnter(GameState::Resetting)))
+        .add_systems((animate_sprite, player_move, reset_map, entity_update)
+            .in_set(OnUpdate(GameState::Playing)))
+        .add_system(clear_map.in_schedule(OnEnter(GameState::Resetting)))
         .run();
 }
