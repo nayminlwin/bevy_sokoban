@@ -13,7 +13,7 @@ pub enum GameState {
     #[default]
     Playing,
     Resetting,
-    GameOver
+    NextLevel
 }
 
 fn spawn_camera(mut commands: Commands) {
@@ -49,8 +49,16 @@ fn main() {
         .add_state::<GameState>()
         .add_startup_system(spawn_camera)
         .add_system(spawn_map.in_schedule(OnEnter(GameState::Playing)))
-        .add_systems((animate_sprite, player_move, reset_map, entity_update)
-            .in_set(OnUpdate(GameState::Playing)))
+        .add_systems((
+                animate_sprite,
+                player_move,
+                reset_map, 
+                entity_update,
+                win_condition
+             ).in_set(OnUpdate(GameState::Playing)))
+        .add_system(init_clear_map.in_schedule(OnEnter(GameState::Resetting)))
+        .add_system(init_clear_map.in_schedule(OnEnter(GameState::NextLevel)))
         .add_system(clear_map.in_schedule(OnEnter(GameState::Resetting)))
+        .add_system(clear_map.in_schedule(OnEnter(GameState::NextLevel)))
         .run();
 }

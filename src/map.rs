@@ -62,9 +62,7 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                 create_tile_bundle(0, atlas_handle.clone(), transform),
             );
 
-            let tile_pos = TilePos { x, y };
-
-            let tile_index = tile_pos.to_index(map_size.width);
+            let tile_pos = TilePos::new(x, y, map_size.width);
 
             let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 3.) * center_transform;
 
@@ -82,7 +80,7 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                     animation_indices: AnimationIndices { first: 0, last: 7 },
                     move_cooldown: MoveTimer(Timer::from_seconds(0.4, TimerMode::Once))
                 }).id();
-                map_tiles.tiles[tile_index] = Some(entity);
+                map_tiles.tiles[tile_pos.index] = Some(entity);
             } else if c == 'o' {
                 let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 2.)
                     * center_transform;
@@ -90,7 +88,7 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                 commands.spawn(
                     create_tile_bundle(1, atlas_handle.clone(), transform)
                 );
-                triggers.push(tile_index);
+                triggers.push(tile_pos.index);
             } else if c == 'b' {
                 let entity = commands.spawn((
                     create_tile_bundle(3, atlas_handle.clone(), transform),
@@ -100,13 +98,13 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                         y: transform.translation.y
                     },
                 )).id();
-                map_tiles.tiles[tile_index] = Some(entity);
+                map_tiles.tiles[tile_pos.index] = Some(entity);
             }
 
             if let Some((sprite_index, block_type)) = match c {
                 '#' => Some((2, BlockType::Wall)),
                 'D' => {
-                    commands.spawn(DoorIndex(tile_index));
+                    commands.spawn(DoorIndex(tile_pos.index));
                     Some((4, BlockType::Door))
                 },
                 _ => None
@@ -115,7 +113,7 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                     create_tile_bundle(sprite_index, atlas_handle.clone(), transform),
                     tile_pos, block_type
                 )).id();
-                map_tiles.tiles[tile_index] = Some(entity);
+                map_tiles.tiles[tile_pos.index] = Some(entity);
             }
 
             x += 1;
@@ -129,6 +127,25 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
 pub fn reset_map(keyboard_input: Res<Input<KeyCode>>, mut next_state: ResMut<NextState<GameState>>) {
     if keyboard_input.just_pressed(KeyCode::R) {
         next_state.set(GameState::Resetting);
+    }
+}
+
+pub fn init_clear_map(
+    mut commands: Commands,
+    mut tiles_query: Query<&mut TilePos>) {
+    commands.spawn(AnimationTimer(Timer::from_seconds(1., TimerMode::Once)));
+}
+
+pub fn clear_map(
+    timer: Res<Timer>,
+    mut tiles_q: Query<&mut Transform>,
+    timer_q: Query<&AnimationTimer, Without<Player>>) {
+    if let Ok(anim_timer) = timer_q.get_single() {
+        if (anim_timer.tick(timer.delta()).finished()) {
+            // TODO: Transition to level load
+        } else {
+            
+        }
     }
 }
 
