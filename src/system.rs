@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::assets::*;
+use crate::{assets::*, GameState};
 
 pub fn animate_sprite(
     time: Res<Time>,
@@ -25,10 +25,11 @@ pub fn animate_sprite(
 pub fn entity_update(time: Res<Time>,
     mut query: Query<(&mut Transform, &WorldPosition)>) {
 
+    let delta_seconds = time.delta_seconds();
     for (mut transform, movable) in &mut query {
         let delta = Vec3::new(
-            (movable.x - transform.translation.x) * time.delta_seconds() * 5.,
-            (movable.y - transform.translation.y) * time.delta_seconds() * 5., 0.);
+            (movable.x - transform.translation.x) * delta_seconds * 5.,
+            (movable.y - transform.translation.y) * delta_seconds * 5., 0.);
         transform.translation += delta;
     }
 }
@@ -45,11 +46,12 @@ pub fn player_move(
         Without<Player>>,
     mut map_tiles_query: Query<&mut TileStorage>) {
 
-    let mut map_tiles: Mut<TileStorage> = map_tiles_query.single_mut();
+
     for (player_entity, mut world_pos, mut tile_pos, mut move_cooldown, 
         mut anim_indices, mut sprite) in &mut player {
 
         if move_cooldown.tick(time.delta()).finished() {
+            let mut map_tiles: Mut<TileStorage> = map_tiles_query.single_mut();
 
             anim_indices.first = 0;
             anim_indices.last = 7;
@@ -73,7 +75,7 @@ pub fn player_move(
                 continue;
             }
 
-            let new_pos = tile_pos.add_and_clone(dx, dy);
+            let new_pos = tile_pos.add_and_clone(dx, dy, map_tiles.size.width);
 
             // Flip sprite depending on x coord direction
             sprite.flip_x = dx < 0;
@@ -84,22 +86,18 @@ pub fn player_move(
                 return;
             }
 
-            let old_index = tile_pos.to_index(map_tiles.size.width);
-            let new_index = new_pos.to_index(map_tiles.size.width);
-
             if let Some(blocking_entity) = map_tiles.move_tile(
-                player_entity, old_index, new_index) {
+                player_entity, tile_pos.index, new_pos.index) {
 
                 let (box_entity, mut tile_pos, _, maybe_world_pos, _, block_type)
                     = blocking_tiles_query.get_mut(blocking_entity).unwrap();
 
                 if matches!(block_type, BlockType::Box) {
-                    let old_index = tile_pos.to_index(map_tiles.size.width);
+                    let new_pos = tile_pos.add_and_clone(dx, dy, map_tiles.size.width);
 
-                    let new_pos = tile_pos.add_and_clone(dx, dy);
-                    let new_index = new_pos.to_index(map_tiles.size.width);
+                    if let None = map_tiles.move_tile(
+                        box_entity, tile_pos.index, new_pos.index) {
 
-                    if let None = map_tiles.move_tile(box_entity, old_index, new_index) {
                         *tile_pos = new_pos;
                         let mut world_pos = maybe_world_pos.unwrap();
                         world_pos.x += movement.x;
@@ -150,5 +148,21 @@ pub fn player_move(
             move_cooldown.reset();
         }
 
+    }
+}
+
+pub fn win_condition(
+    mut next_state: ResMut<NextState<GameState>>, 
+    player_query: Query<(&TilePos, &MoveTimer), With<Player>>,
+    door_index_query: Query<&DoorIndex>,
+    ) {
+
+    let door_index = door_index_query.get_single().unwrap();
+    for (tile_pos, move_cooldown) in &player_query {
+        if tile_pos.index == door_index && 
+            move_cooldown.tick(time.delta()).finished() {
+
+            next_state.set(GameState::NextLevel);
+        }
     }
 }

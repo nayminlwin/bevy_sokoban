@@ -43,17 +43,25 @@ pub struct PlayerBundle {
 pub struct TilePos {
     pub x: i32,
     pub y: i32,
+    pub index: usize,
 }
 
 impl TilePos {
-    pub fn to_index(&self, max_width: i32) -> usize {
-        (self.x + self.y * max_width) as usize
+    pub fn new(x: i32, y: i32, width: i32) -> Self {
+        Self {
+            x,
+            y,
+            index: (self.x + self.y * width) as usize
+        }
     }
 
-    pub fn add_and_clone(&self, dx: i32, dy: i32) -> TilePos {
+    pub fn add_and_clone(&self, dx: i32, dy: i32, width: i32) -> TilePos {
+        let x = self.x + dx;
+        let y = self.y + dy;
         TilePos {
-            x: self.x + dx,
-            y: self.y + dy
+            x,
+            y,
+            index: (self.x + self.y * width) as usize
         }
     }
 }
