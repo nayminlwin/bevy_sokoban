@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{assets::*, levels::LEVELS};
-use crate::GameState;
+use crate::{GameState, GameLevel};
 
 fn create_tile_bundle(sprite_index: usize, texture_atlas: Handle<TextureAtlas>, transform: Transform)
     -> SpriteSheetBundle {
@@ -14,7 +14,10 @@ fn create_tile_bundle(sprite_index: usize, texture_atlas: Handle<TextureAtlas>, 
     }
 }
 
-pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
+pub fn spawn_map(mut commands: Commands, 
+    asset_server: Res<AssetServer>, 
+    game_level: Res<GameLevel>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>) {
 
     let player_atlas_handle = load_asset_atlas(&asset_server, &mut texture_atlases, 
         "sprites/HumanBaseIdle.png", 8, 2, Some(Vec2::splat(24.)), Some(Vec2::splat(12.)));
@@ -22,7 +25,8 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
     let atlas_handle = load_asset_atlas(&asset_server, &mut texture_atlases,
         "sprites/DungeonTiles.png", 4, 2, None, None);
 
-    let map_level = LEVELS[0].trim();
+    let level = game_level.0;
+    let map_level = LEVELS[level].trim();
     let mut map_size = MapSize { width: 0, height: 1 };
     let mut triggers = Vec::new();
 
@@ -58,13 +62,22 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                 Transform::from_xyz(x as f32 * 8., y as f32 * -8., 0.) 
                     * center_transform;
             
-            commands.spawn(
-                create_tile_bundle(0, atlas_handle.clone(), transform),
-            );
-
             let tile_pos = TilePos::new(x, y, map_size.width);
 
-            let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 3.) * center_transform;
+            commands.spawn(
+                (create_tile_bundle(0, atlas_handle.clone(), transform),
+                    tile_pos,
+                ));
+
+            let mut transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 3.) * center_transform;
+            if c == 'D' {
+                // Rotate the door if on the sides
+                if x == 0 {
+                    transform.rotate_z(1.570796);
+                } else if x + 1 == map_size.width {
+                    transform.rotate_z(-1.570796);
+                }
+            }
 
             if c == '@' {
                 let entity = commands.spawn(PlayerBundle {
@@ -78,16 +91,18 @@ pub fn spawn_map(mut commands: Commands, asset_server: Res<AssetServer>, mut tex
                     tile_pos,
                     animation_timer: AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
                     animation_indices: AnimationIndices { first: 0, last: 7 },
-                    move_cooldown: MoveTimer(Timer::from_seconds(0.4, TimerMode::Once))
+                    move_cooldown: MoveTimer(Timer::from_seconds(0.3, TimerMode::Once))
                 }).id();
                 map_tiles.tiles[tile_pos.index] = Some(entity);
             } else if c == 'o' {
                 let transform = Transform::from_xyz(x as f32 * 8., y as f32 * -8., 2.)
                     * center_transform;
 
-                commands.spawn(
-                    create_tile_bundle(1, atlas_handle.clone(), transform)
-                );
+                commands.spawn((
+                    create_tile_bundle(1, atlas_handle.clone(), transform),
+                    tile_pos
+                ));
+
                 triggers.push(tile_pos.index);
             } else if c == 'b' {
                 let entity = commands.spawn((
@@ -132,29 +147,61 @@ pub fn reset_map(keyboard_input: Res<Input<KeyCode>>, mut next_state: ResMut<Nex
 
 pub fn init_clear_map(
     mut commands: Commands,
-    mut tiles_query: Query<&mut TilePos>) {
-    commands.spawn(AnimationTimer(Timer::from_seconds(1., TimerMode::Once)));
+    // map_tiles_query: Query<&TileStorage>,
+) {
+    let world_pos = WorldPosition {
+            x: 180.,
+            y: 120.,
+        };
+    commands.spawn(( 
+        AnimationTimer(Timer::from_seconds(1.0, TimerMode::Once)),
+        world_pos
+    ));
 }
 
 pub fn clear_map(
-    timer: Res<Timer>,
-    mut tiles_q: Query<&mut Transform>,
-    timer_q: Query<&AnimationTimer, Without<Player>>) {
-    if let Ok(anim_timer) = timer_q.get_single() {
-        if (anim_timer.tick(timer.delta()).finished()) {
-            // TODO: Transition to level load
+    mut commands: Commands,
+    timer: Res<Time>,
+    game_state: Res<State<GameState>>,
+    mut game_level: ResMut<GameLevel>,
+    mut game_state_next: ResMut<NextState<GameState>>,
+    mut tiles_q: Query<(Entity, Option<&TilePos>, Option<&mut Transform>), (Without<Camera>, Without<Window>)>,
+    mut timer_q: Query<(&mut AnimationTimer, &WorldPosition), Without<Player>>) {
+    if let Ok((mut anim_timer, world_pos)) = timer_q.get_single_mut() {
+        let time_delta = timer.delta();
+        if anim_timer.tick(time_delta).finished() {
+            // TODO: clear entities and transition to level load
+
+            for (entity, _, _) in &tiles_q {
+                commands.entity(entity).despawn();
+            }
+            if matches!(game_state.0, GameState::NextLevel) {
+                let level = game_level.0;
+                let new_level = level + 1;
+                if new_level < LEVELS.len() {
+                    game_level.0 = new_level;
+                    game_state_next.set(GameState::Playing);
+                } else {
+                    game_state_next.set(GameState::GameOver);
+                }
+            } else {
+                // Assume to be just resetting the level
+                game_state_next.set(GameState::Playing);
+            }
         } else {
-            
+            let elapsed = anim_timer.percent();
+            if elapsed <= 1. {
+                for (_, maybe_tilepos, maybe_transform) in &mut tiles_q {
+                    if let Some(mut transform) = maybe_transform {
+                        if let Some(tile_pos) = maybe_tilepos {
+                            let offset: f32 = (((tile_pos.x as f32 - 2.) / 50.) + elapsed).clamp(0., 1.);
+                            transform.translation.y += 
+                                (world_pos.y - transform.translation.y) * offset;
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
-pub fn clear_map(mut commands: Commands, mut next_state: ResMut<NextState<GameState>>,
-    entities: Query<Entity, (Without<Camera>, Without<Window>)>) {
-
-    for entity in &entities {
-        commands.entity(entity).despawn();
-    }
-
-    next_state.set(GameState::Playing);
-}

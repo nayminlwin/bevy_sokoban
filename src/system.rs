@@ -22,15 +22,26 @@ pub fn animate_sprite(
     }
 }
 
-pub fn entity_update(time: Res<Time>,
+pub fn entity_update(
+    move_timer_query: Query<&MoveTimer>, 
     mut query: Query<(&mut Transform, &WorldPosition)>) {
 
-    let delta_seconds = time.delta_seconds();
-    for (mut transform, movable) in &mut query {
-        let delta = Vec3::new(
-            (movable.x - transform.translation.x) * delta_seconds * 5.,
-            (movable.y - transform.translation.y) * delta_seconds * 5., 0.);
-        transform.translation += delta;
+    // let delta_seconds = time.delta_seconds();
+    let MoveTimer(timer) = move_timer_query.get_single().unwrap();
+    let progress = timer.percent();
+
+    for (mut transform, world_pos) in &mut query {
+
+        if timer.just_finished() {
+            transform.translation.x = world_pos.x;
+            transform.translation.y = world_pos.y;
+
+        } else if progress <= 1. {
+            let delta = Vec3::new(
+                (world_pos.x - transform.translation.x) * progress,
+                (world_pos.y - transform.translation.y) * progress, 0.);
+            transform.translation += delta;
+        }
     }
 }
 
@@ -157,10 +168,9 @@ pub fn win_condition(
     door_index_query: Query<&DoorIndex>,
     ) {
 
-    let door_index = door_index_query.get_single().unwrap();
+    let DoorIndex(door_index) = door_index_query.get_single().unwrap();
     for (tile_pos, move_cooldown) in &player_query {
-        if tile_pos.index == door_index && 
-            move_cooldown.tick(time.delta()).finished() {
+        if tile_pos.index == *door_index && move_cooldown.finished() {
 
             next_state.set(GameState::NextLevel);
         }

@@ -51,7 +51,7 @@ impl TilePos {
         Self {
             x,
             y,
-            index: (self.x + self.y * width) as usize
+            index: (x + y * width) as usize
         }
     }
 
@@ -61,7 +61,7 @@ impl TilePos {
         TilePos {
             x,
             y,
-            index: (self.x + self.y * width) as usize
+            index: (x + y * width) as usize
         }
     }
 }
