@@ -1,16 +1,17 @@
 use bevy::{prelude::*, window::WindowResolution};
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
-pub mod assets;
+pub mod components;
 pub mod levels;
 pub mod map;
-pub mod system;
+pub mod player;
 
 use map::*;
-use system::*;
+use player::*;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default, States)]
 pub enum GameState {
     #[default]
+    Starting,
     Playing,
     Resetting,
     NextLevel,
@@ -19,6 +20,20 @@ pub enum GameState {
 
 #[derive(Resource, Default)]
 pub struct GameLevel(usize);
+
+
+pub fn load_asset_atlas(asset_server: &Res<AssetServer>,  
+    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
+    path: &str, columns: usize, rows: usize,
+    padding: Option<Vec2>, offset: Option<Vec2>) -> Handle<TextureAtlas> {
+
+    let asset_handle = asset_server.load(path);
+    let asset_atlas =
+        TextureAtlas::from_grid(asset_handle, 
+        Vec2::new(8., 8.), columns, rows, padding, offset);
+    return texture_atlases.add(asset_atlas);
+}
+
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera2dBundle { 
@@ -51,7 +66,8 @@ fn main() {
         .add_state::<GameState>()
         .init_resource::<GameLevel>()
         .add_startup_system(spawn_camera)
-        .add_system(spawn_map.in_schedule(OnEnter(GameState::Playing)))
+        .add_system(spawn_map.in_schedule(OnEnter(GameState::Starting)))
+        .add_system(transition_map.in_set(OnUpdate(GameState::Starting)))
         .add_systems((
                 animate_sprite,
                 player_move,

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{assets::*, GameState};
+use crate::{components::*, GameState};
 
 pub fn animate_sprite(
     time: Res<Time>,
@@ -53,8 +53,8 @@ pub fn player_move(
     mut player: Query<(Entity, &mut WorldPosition, &mut TilePos, 
         &mut MoveTimer, &mut AnimationIndices, &mut TextureAtlasSprite), With<Player>>,
     mut blocking_tiles_query: Query<
-        (Entity, &mut TilePos, &mut Transform, Option<&mut WorldPosition>, &mut TextureAtlasSprite, &BlockType),
-        Without<Player>>,
+        (Entity, &mut TilePos, &mut Transform, Option<&mut WorldPosition>, 
+         &mut TextureAtlasSprite, &BlockType), Without<Player>>,
     mut map_tiles_query: Query<&mut TileStorage>) {
 
 

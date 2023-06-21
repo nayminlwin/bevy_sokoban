@@ -32,7 +32,7 @@ pub struct PlayerBundle {
     #[bundle]
     pub sprite_sheet_bundle: SpriteSheetBundle,
     pub player: Player,
-    pub movable: WorldPosition,
+    pub world_pos: WorldPosition,
     pub animation_indices: AnimationIndices,
     pub animation_timer: AnimationTimer,
     pub move_cooldown: MoveTimer,
@@ -112,17 +112,5 @@ impl TileStorage {
             return None;
         }
     }
-}
-
-pub fn load_asset_atlas(asset_server: &Res<AssetServer>,  
-    texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
-    path: &str, columns: usize, rows: usize,
-    padding: Option<Vec2>, offset: Option<Vec2>) -> Handle<TextureAtlas> {
-
-    let asset_handle = asset_server.load(path);
-    let asset_atlas =
-        TextureAtlas::from_grid(asset_handle, 
-        Vec2::new(8., 8.), columns, rows, padding, offset);
-    return texture_atlases.add(asset_atlas);
 }
 
