@@ -88,7 +88,7 @@ pub fn spawn_map(mut commands: Commands,
             }
 
             if c == '@' {
-                let mut timer = Timer::from_seconds(0.3, TimerMode::Once);
+                let mut timer = Timer::from_seconds(0.4, TimerMode::Once);
                 timer.pause();
                 let entity = commands.spawn(PlayerBundle {
                     sprite_sheet_bundle:
@@ -218,6 +218,7 @@ pub fn clear_map(
                     game_level.0 = new_level;
                     game_state_next.set(GameState::Starting);
                 } else {
+                    println!("Game over!");
                     game_state_next.set(GameState::GameOver);
                 }
             } else {

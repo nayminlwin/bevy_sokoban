@@ -70,16 +70,16 @@ pub fn player_move(
             let mut movement = Vec3::ZERO;
             let mut dx: i32 = 0;
             let mut dy: i32 = 0;
-            if keyboard_input.just_pressed(KeyCode::Left) {
+            if keyboard_input.pressed(KeyCode::Left) {
                 dx -= 1;
                 movement.x = -1. * 8.;
-            } else if keyboard_input.just_pressed(KeyCode::Up) {
+            } else if keyboard_input.pressed(KeyCode::Up) {
                 dy -= 1;
                 movement.y = 1. * 8.;
-            } else if keyboard_input.just_pressed(KeyCode::Right) {
+            } else if keyboard_input.pressed(KeyCode::Right) {
                 dx += 1;
                 movement.x = 1. * 8.;
-            } else if keyboard_input.just_pressed(KeyCode::Down) {
+            } else if keyboard_input.pressed(KeyCode::Down) {
                 dy += 1;
                 movement.y = -1. * 8.;
             } else {
@@ -171,7 +171,6 @@ pub fn win_condition(
     let DoorIndex(door_index) = door_index_query.get_single().unwrap();
     for (tile_pos, move_cooldown) in &player_query {
         if tile_pos.index == *door_index && move_cooldown.finished() {
-
             next_state.set(GameState::NextLevel);
         }
     }

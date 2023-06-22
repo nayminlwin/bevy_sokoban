@@ -18,11 +18,19 @@ pub enum GameState {
     GameOver
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct GameLevel(usize);
 
+// Manually implement default to control the start level
+impl Default for GameLevel {
+    fn default() -> Self {
+        Self(0)
+    }
+}
 
-pub fn load_asset_atlas(asset_server: &Res<AssetServer>,  
+
+pub fn load_asset_atlas(
+    asset_server: &Res<AssetServer>,  
     texture_atlases: &mut ResMut<Assets<TextureAtlas>>,
     path: &str, columns: usize, rows: usize,
     padding: Option<Vec2>, offset: Option<Vec2>) -> Handle<TextureAtlas> {
@@ -43,6 +51,48 @@ fn spawn_camera(mut commands: Commands) {
         },
         ..default()
     });
+}
+
+fn spawn_gameover(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,  
+) {
+    commands.spawn(
+        TextBundle::from_section(
+            // Accepts a `String` or any type that converts into a `String`, such as `&str`
+            "Congratulations!\nYou've completed all the levels.\nPress 'Space' to start over.",
+            TextStyle {
+                font: asset_server.load("Minimal3x5.ttf"),
+                font_size: 5.0,
+                color: Color::WHITE,
+            },
+        ) // Set the alignment of the Text
+        .with_text_alignment(TextAlignment::Center)
+        .with_style(Style {
+                margin: UiRect::all(Val::Auto),
+                align_self: AlignSelf::Center,
+                ..default()
+            })
+    );
+}
+
+fn clear_gameover(mut commands: Commands,
+    text_q: Query<Entity, With<Text>>,
+) {
+    for entity in &text_q {
+        commands.entity(entity).despawn();
+    }
+}
+
+fn startover(
+    mut game_level: ResMut<GameLevel>,
+    mut next_state: ResMut<NextState<GameState>>, 
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        game_level.0 = 0;
+        next_state.set(GameState::Starting);
+    }
 }
 
 fn main() {
@@ -79,5 +129,8 @@ fn main() {
         .add_system(init_clear_map.in_schedule(OnEnter(GameState::NextLevel)))
         .add_system(clear_map.in_set(OnUpdate(GameState::Resetting)))
         .add_system(clear_map.in_set(OnUpdate(GameState::NextLevel)))
+        .add_system(spawn_gameover.in_schedule(OnEnter(GameState::GameOver)))
+        .add_system(clear_gameover.in_schedule(OnExit(GameState::GameOver)))
+        .add_system(startover.in_set(OnUpdate(GameState::GameOver)))
         .run();
 }
